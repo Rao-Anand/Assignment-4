@@ -67,28 +67,10 @@ merge(mapWorld,
 mapWorldVars=merge(mapWorld,
                    Pollution_index,by.x='NAME',by.y='country')
 
-
-
-```
-
-
-=======================================================================
-
-
-### Map 1
-
-
-```{r}
 library(ggplot2)
 # plot original map
 base=ggplot(data=mapWorld) + geom_sf(fill='grey90',
                                      color=NA) + theme_classic()
-
-
-```
-
-### Map 2
-```{r}
 
 colMap= base + geom_sf(data=mapWorldVars,
                        aes(fill=particlePollution),
@@ -104,16 +86,6 @@ clusterMap= base + geom_sf(data=mapWorldVars,
 
 clusterMap+ scale_fill_brewer(palette ='YlOrRd')
 
-
-```
-
-Row 
------------------------------------------------------------------------
-
-### Map 3
-
-```{r, eval=TRUE,warning=FALSE,message=FALSE}
-
 #previously
 theLegLabels=c('1_worst',2,'3_best')
 theLegTitle="World_Order\n(grey is missing)"
@@ -124,5 +96,20 @@ clusterMap+ scale_fill_brewer(palette ='YlOrRd',
                               labels=theLegLabels,
                               name=theLegTitle)
 
-clusterMap
 ```
+
+
+=======================================================================
+
+
+### World Pollution Index 
+
+
+```{r}
+
+
+clusterMap
+
+
+```
+
