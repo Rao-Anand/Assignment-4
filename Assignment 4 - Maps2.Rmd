@@ -1,0 +1,128 @@
+---
+title: "Dashboards at EVANS UW"
+author: "Great student"
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    source_code: embed # share your code?
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+###
+library(ggplot2)
+library(plotly)
+library(sf)
+
+library(rio)
+Pollution_index=import("Pollution index.xlsx")
+str(Pollution_index)
+
+boxplot(Pollution_index[,c('particlePollution','pop2022')])
+
+clustData=Pollution_index #copy
+
+clustData[-1]=as.data.frame(scale(clustData[-1]))
+
+#change 2
+Pollution_index$particlePollution_S=clustData$particlePollution
+Pollution_index$pop2022_S=clustData$pop2022
+
+str(clustData[,-1])
+
+set.seed(123)
+library(cluster)
+
+distMatrix=cluster::daisy(clustData[,-1])
+        
+res.pam=cluster::pam(x=distMatrix,
+                     k = 3,
+                     cluster.only = F)
+### change3
+Pollution_index$cluster=as.factor(res.pam$clustering)
+
+
+theVars=c('particlePollution_S','cluster')
+aggregate(.~cluster,
+          data=Pollution_index[,theVars],
+          FUN=median)
+
+#change 4
+Pollution_index$cluster=factor(Pollution_index$cluster,
+                           levels=c(3,2,1),
+                           labels=c("low","mid","best"), 
+                           ordered=T)
+
+linkmap=("https://github.com/Rao-Anand/Assignment-3/blob/main/worldMap.geojson")
+
+library(sf)
+
+mapWorld=read_sf("worldMap.geojson")
+head(mapWorld)
+
+# change 5
+merge(mapWorld,
+                   Pollution_index,by.x='NAME',by.y='country')
+
+mapWorldVars=merge(mapWorld,
+                   Pollution_index,by.x='NAME',by.y='country')
+
+
+
+```
+
+
+=======================================================================
+
+
+### Map 1
+
+
+```{r}
+library(ggplot2)
+# plot original map
+base=ggplot(data=mapWorld) + geom_sf(fill='grey90',
+                                     color=NA) + theme_classic()
+
+
+```
+
+### Map 2
+```{r}
+
+colMap= base + geom_sf(data=mapWorldVars,
+                       aes(fill=particlePollution),
+                       color=NA)
+colMap
+
+
+colMap + scale_fill_gradient(low = 'red',
+                             high= 'blue')
+clusterMap= base + geom_sf(data=mapWorldVars,
+                           aes(fill=cluster),
+                           color=NA) # color of border
+
+clusterMap+ scale_fill_brewer(palette ='YlOrRd')
+
+
+```
+
+Row 
+-----------------------------------------------------------------------
+
+### Map 3
+
+```{r, eval=TRUE,warning=FALSE,message=FALSE}
+
+#previously
+theLegLabels=c('1_worst',2,'3_best')
+theLegTitle="World_Order\n(grey is missing)"
+
+#now
+clusterMap+ scale_fill_brewer(palette ='YlOrRd',
+                              direction = -1, # color order
+                              labels=theLegLabels,
+                              name=theLegTitle)
+
+clusterMap
+```
