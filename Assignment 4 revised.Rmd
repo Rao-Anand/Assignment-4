@@ -9,6 +9,7 @@ output:
 ```{r setup, include=FALSE}
 library(flexdashboard) # always
 library(rio)
+library(ggplot2)
 UOF=import("UOF.XLSX")
 table(UOF$Precinct)
 names(UOF)
@@ -34,6 +35,30 @@ names(PrecinctIncident_TypeDF)=c("precint","Incident_Type","counts")
 PrecinctIncident_TypeDF$pctCol=as.data.frame(PrecintIncident_Type_mgCol)[,3]
 
 PrecinctIncident_TypeDF
+
+base1=ggplot(data=PrecinctIncident_TypeDF, 
+             aes(x=Incident_Type, y=pctCol,
+                 fill=precint)) # fill brings a legend
+barDodge= base1 +  geom_bar(stat="identity",
+                            position ='dodge') 
+barDodge 
+
+barStacked = base1 + geom_bar(stat = "identity",
+                              position = 'stack')#default
+barStacked 
+
+library(scales)
+library(ggplot2)
+barStacked= barStacked + geom_text(size = 5,# check below:
+                             position = position_stack(vjust = 0.5),# center
+                             aes(label=percent(pctCol,accuracy = 0.1)))# percent format
+
+barStacked = barStacked + scale_y_continuous(labels = scales::percent)
+
+barStacked
+base2 =ggplot(PrecinctIncident_TypeDF, aes(x = precint, y = pctCol ) )
+bars  = base2 + geom_bar( stat = "identity" ) + theme_minimal()
+barsFa = bars + facet_grid(~ Incident_Type)  # X
 
 
 library(rio)
@@ -109,8 +134,92 @@ StateCount_HI$HHINCOME.Cum=cumsum(StateCount_HI$HHINCOME)
 head(StateCount_HI,20)
 
 
+library(rio)
+Pollution_index=import("Pollution index.xlsx")
+str(Pollution_index)
+
+boxplot(Pollution_index[,c('particlePollution','pop2022')])
+
+clustData=Pollution_index #copy
+
+clustData[-1]=as.data.frame(scale(clustData[-1]))
+
+#change 2
+Pollution_index$particlePollution_S=clustData$particlePollution
+Pollution_index$pop2022_S=clustData$pop2022
+
+str(clustData[,-1])
+
+set.seed(123)
+library(cluster)
+
+distMatrix=cluster::daisy(clustData[,-1])
+        
+res.pam=cluster::pam(x=distMatrix,
+                     k = 3,
+                     cluster.only = F)
+### change3
+Pollution_index$cluster=as.factor(res.pam$clustering)
+
+
+theVars=c('particlePollution_S','cluster')
+aggregate(.~cluster,
+          data=Pollution_index[,theVars],
+          FUN=median)
+
+#change 4
+Pollution_index$cluster=factor(Pollution_index$cluster,
+                           levels=c(3,2,1),
+                           labels=c("low","mid","best"), 
+                           ordered=T)
+
+linkmap=("https://github.com/Rao-Anand/Assignment-3/blob/main/worldMap.geojson")
+
+library(sf)
+
+mapWorld=read_sf("worldMap.geojson")
+head(mapWorld)
+
+# change 5
+merge(mapWorld,
+                   Pollution_index,by.x='NAME',by.y='country')
+
+mapWorldVars=merge(mapWorld,
+                   Pollution_index,by.x='NAME',by.y='country')
+
+library(ggplot2)
+# plot original map
+base=ggplot(data=mapWorld) + geom_sf(fill='grey90',
+                                     color=NA) + theme_classic()
+
+colMap= base + geom_sf(data=mapWorldVars,
+                       aes(fill=particlePollution),
+                       color=NA)
+colMap
+
+
+colMap + scale_fill_gradient(low = 'red',
+                             high= 'blue')
+clusterMap= base + geom_sf(data=mapWorldVars,
+                           aes(fill=cluster),
+                           color=NA) # color of border
+
+clusterMap+ scale_fill_brewer(palette ='YlOrRd')
+
+#previously
+theLegLabels=c('1_worst',2,'3_best')
+theLegTitle="World_Order\n(grey is missing)"
+
+#now
+clusterMap+ scale_fill_brewer(palette ='YlOrRd',
+                              direction = -1, # color order
+                              labels=theLegLabels,
+                              name=theLegTitle)
 
 ```
+
+
+
 
 [comment]: # (code for plots in this column)
 
@@ -123,31 +232,10 @@ Column {data-width=650}
 
 ```{r}
 library(ggplot2)
-base1=ggplot(data=PrecinctIncident_TypeDF, 
-             aes(x=Incident_Type, y=pctCol,
-                 fill=precint)) # fill brings a legend
-barDodge= base1 +  geom_bar(stat="identity",
-                            position ='dodge') 
-barDodge 
 
-barStacked = base1 + geom_bar(stat = "identity",
-                              position = 'stack')#default
-barStacked 
 
-library(scales)
-barStacked= barStacked + geom_text(size = 5,# check below:
-                             position = position_stack(vjust = 0.5),# center
-                             aes(label=percent(pctCol,accuracy = 0.1)))# percent format
-
-barStacked = barStacked + scale_y_continuous(labels = scales::percent)
-
-barStacked
-base2 = ggplot(PrecinctIncident_TypeDF, aes(x = precint, y = pctCol ) )
-bars  = base2 + geom_bar( stat = "identity" ) + theme_minimal()
-barsFa = bars + facet_grid(~ Incident_Type)  # X
-# trick
 barsFa + coord_flip()
-base2
+
 
 
 
@@ -177,4 +265,24 @@ bar2
 
 
 ```
+
+
+[comment]: # (code for plots in this column)
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+
+
+### World Pollution Index
+
+```{r}
+
+# code coming soon
+
+clusterMap
+
+```
+
 
